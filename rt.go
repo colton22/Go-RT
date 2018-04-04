@@ -63,6 +63,7 @@ func getPassword(prompt string) string {
 
 	return strings.TrimSpace(text)
 }
+
 func queryHistory(settings map[string]string, tnumber string) []string {
 	req, err := http.NewRequest("GET", "http://"+settings["endpoint"]+"/REST/1.0/ticket/"+tnumber+"/history?user="+settings["username"]+"&pass="+settings["password"], nil)
 	if err != nil {
@@ -120,6 +121,10 @@ func getTicket(settings map[string]string, tnumber string) map[string]string {
 	// IS THE TICKET NUMBER NUMERIC?
 	if _, err := strconv.Atoi(tnumber); err != nil {
 		fmt.Println("Ticket Number is not numeric!\nPlease include a valid ticket number. rt -t 1234567")
+		os.Exit(0)
+	}
+	if t, _ := strconv.Atoi(tnumber); t == -1 {
+		showGetHelp()
 		os.Exit(0)
 	}
 	if t, _ := strconv.Atoi(tnumber); t < 0 {
@@ -283,19 +288,22 @@ func showAttachments(settings map[string]string, tnumber string) {
 	}
 }
 
-func rtsearch(settings map[string]string, owners string, queues string, status string, title string, showURL bool) {
-	if owners == "" && queues == "" && status == "" && title == "" {
-		fmt.Println("No Search Criteria Specified. Haulting Search.")
+func rtsearch(settings map[string]string, owners string, queues string, status string, titles string, showURL bool) {
+	if owners == "" && queues == "" && status == "" && titles == "" {
+		//No criteria? Send to help()
+		showSearchHelp()
 		os.Exit(0)
 	}
 	//We have some sort of search criteria, lets build the query
 	query_o := ""
 	query_q := ""
 	query_s := ""
+	query_t := ""
 	query := "http://rt.llnw.com/REST/1.0/search/ticket?user=" + settings["username"] + "&pass=" + settings["password"] + "&query="
 	o := strings.Split(owners, ",")
 	q := strings.Split(queues, ",")
 	s := strings.Split(status, ",")
+	t := strings.Split(titles, ",")
 	for _, owner := range o {
 		query_o = query_o + "Owner = '" + owner + "' OR "
 	}
@@ -308,9 +316,13 @@ func rtsearch(settings map[string]string, owners string, queues string, status s
 	for _, stat := range s {
 		query_s = query_s + "Status = '" + stat + "' OR "
 	}
+	for _, title := range t {
+		query_t = query_t + "Subject LIKE '" + title + "' OR "
+	}
 	query_o = "(" + strings.TrimRight(query_o, " OR ") + ")"
 	query_q = "(" + strings.TrimRight(query_q, " OR ") + ")"
 	query_s = "(" + strings.TrimRight(query_s, " OR ") + ")"
+	query_t = "(" + strings.TrimRight(query_t, " OR ") + ")"
 	if query_o != "(Owner = '')" {
 		query = query + query_o + " AND "
 	}
@@ -320,14 +332,15 @@ func rtsearch(settings map[string]string, owners string, queues string, status s
 	if query_s != "(Status = '')" {
 		query = query + query_s + " AND "
 	}
-	if title != "" {
-		query = query + "Subject LIKE '" + title + "' AND "
+	if query_t != "(Subject LIKE '')" {
+		query = query + query_t + "' AND "
 	}
 	query = strings.TrimRight(query, " AND ")
 	query = strings.Replace(strings.Replace(query, "'", "%27", -1), " ", "%20", -1)
 	//START SEARCH
 	if showURL {
 		fmt.Println(query)
+		os.Exit(0)
 	}
 	req, err := http.NewRequest("GET", query, nil)
 	if err != nil {
@@ -371,7 +384,7 @@ func showGetHelp() {
 	fmt.Println("    -user [string]:   Specify username for Endpoint")
 	fmt.Println("    -e [string]:      Endpoint (ie: my.rtserver.com)")
 	fmt.Println("\n  Options")
-	fmt.Println("    -f: Specify Custom Fields for Summary (csv list)")
+	fmt.Println("    -f: Specify Custom Fields for Summary (csv,list)")
 	fmt.Println("    -t: Ticket Number (required)")
 	fmt.Println("    -p: Show Ticket History")
 	fmt.Println("    -c: Show Ticket Comments")
@@ -411,8 +424,15 @@ func showSearchHelp() {
 	fmt.Println("    -config [string]: Alt config file (~/.rt.d/config)")
 	fmt.Println("    -user [string]:   Specify username for Endpoint")
 	fmt.Println("    -e [string]:      Endpoint (ie: my.rtserver.com)")
+	fmt.Println("\n  Options")
+	fmt.Println("    -d:          Only show URL (dry run)")
+	fmt.Println("    -o [string]: Query Tickets by Owner (csv,list)")
+	fmt.Println("    -q [string]: Query Tickets by Queue (csv,list)")
+	fmt.Println("    -s [string]: Query Tickets by Status (csv,list)")
+	fmt.Println("    -t [string]: Query Tickets by Title (csv,list)")
+	fmt.Println("      ie: rt search -o jsmith,jdoe -s new,open -q q1,q2")
+	fmt.Println("      ie: rt search -s open -t 'text 1',txt,'text 2'")
 	fmt.Println("")
-
 	os.Exit(0)
 }
 
@@ -463,7 +483,7 @@ func main() {
 	searchQueues := searchCommand.String("q", "", "Search for Tickets in Specified Queues")
 	searchStatus := searchCommand.String("s", "", "Search for Tickets Maching Status")
 	searchTitle := searchCommand.String("t", "", "Search for Tickets Matching Title")
-	searchShowURL := searchCommand.Bool("d", false, "Show Query, Then Search")
+	searchShowURL := searchCommand.Bool("d", false, "Only Show Query URL (dry run)")
 
 	createCommand := flag.NewFlagSet("create", flag.ExitOnError)
 	createHelp := createCommand.Bool("h", false, "Show Help Menu")
