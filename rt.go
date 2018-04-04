@@ -119,16 +119,13 @@ func queryTicket(settings map[string]string, ticket string) map[string]string {
 
 func getTicket(settings map[string]string, tnumber string) map[string]string {
 	// IS THE TICKET NUMBER NUMERIC?
-	if _, err := strconv.Atoi(tnumber); err != nil {
+	t, err := strconv.Atoi(tnumber)
+	if err != nil {
 		fmt.Println("Ticket Number is not numeric!\nPlease include a valid ticket number. rt -t 1234567")
 		os.Exit(0)
 	}
-	if t, _ := strconv.Atoi(tnumber); t == -1 {
+	if t == -1 {
 		showGetHelp()
-		os.Exit(0)
-	}
-	if t, _ := strconv.Atoi(tnumber); t < 0 {
-		fmt.Println(t, "is not valid. Please include a valid ticket number. rt -t 1234567")
 		os.Exit(0)
 	}
 
