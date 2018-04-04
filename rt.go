@@ -63,8 +63,29 @@ func getPassword(prompt string) string {
 
 	return strings.TrimSpace(text)
 }
+func queryHistory(settings map[string]string, tnumber string) []string {
+	req, err := http.NewRequest("GET", "http://"+settings["endpoint"]+"/REST/1.0/ticket/"+tnumber+"/history?user="+settings["username"]+"&pass="+settings["password"], nil)
+	if err != nil {
+		fmt.Println("Error 1")
+		os.Exit(1)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		fmt.Printf("%s", err)
+		os.Exit(1)
+	}
+	defer resp.Body.Close()
+	contents, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Printf("%s", err)
+		os.Exit(1)
+	}
+	content := strings.Split(string(contents), "\n")
+	content = append(content[:0], content[1:]...)
+	return append(content[:0], content[1:]...)
+}
 
-func getTicket(ticket string, settings map[string]string) map[string]string {
+func queryTicket(settings map[string]string, ticket string) map[string]string {
 	req, err := http.NewRequest("GET", "http://"+settings["endpoint"]+"/REST/1.0/ticket/"+ticket+"/show?user="+settings["username"]+"&pass="+settings["password"], nil)
 	if err != nil {
 		fmt.Println("Error 1")
@@ -95,7 +116,178 @@ func getTicket(ticket string, settings map[string]string) map[string]string {
 	return cont
 }
 
-func comment(ticket string, url string, msg string) {
+func getTicket(settings map[string]string, tnumber string) map[string]string {
+	// IS THE TICKET NUMBER NUMERIC?
+	if _, err := strconv.Atoi(tnumber); err != nil {
+		fmt.Println("Ticket Number is not numeric!\nPlease include a valid ticket number. rt -t 1234567")
+		os.Exit(0)
+	}
+	if t, _ := strconv.Atoi(tnumber); t < 0 {
+		fmt.Println(t, "is not valid. Please include a valid ticket number. rt -t 1234567")
+		os.Exit(0)
+	}
+
+	// LETS GET THE CURRENT TICKET INFORMATION MAPPED
+	ticket := queryTicket(settings, tnumber)
+
+	// WAS THAT A VALID TICKET? (split the key for line 2 on phrase does not, if #ofElements >1 error)
+	ec := string(reflect.ValueOf(ticket).MapKeys()[1].Interface().(string))
+	if len(strings.SplitAfter(ec, " does not ")) > 1 {
+		fmt.Println("Ticket number", tnumber, "does not exist.")
+		os.Exit(0)
+	}
+	if len(strings.SplitAfter(ec, "username or password")) > 1 {
+		fmt.Println("Username/Password Incorrect.")
+		os.Exit(0)
+	}
+	return ticket
+}
+
+func showHelp() {
+	//HELP MENU
+	fmt.Println("This is the help menu")
+	os.Exit(0)
+}
+
+func updateTicket(settings map[string]string, tnumber string) {
+	fmt.Println("Will update ", tnumber)
+}
+
+func showTicket(settings map[string]string, tnumber string, comments bool, history bool, sum bool, links bool, attachments bool) {
+	if sum {
+		showSummary(settings, tnumber)
+		fmt.Println("")
+	}
+	if comments {
+		showComments(settings, tnumber, queryHistory(settings, tnumber))
+	}
+	if history {
+		for _, element := range queryHistory(settings, tnumber) {
+			fmt.Println(element)
+		}
+	}
+	if links {
+		showLinks(settings, tnumber)
+		fmt.Println("")
+	}
+	if attachments {
+		showAttachments(settings, tnumber)
+	}
+	os.Exit(0)
+}
+
+func showSummary(settings map[string]string, tnumber string) {
+	ticket := getTicket(settings, tnumber)
+	if settings["summaryFields"] == "" {
+		fmt.Println("summaryFields is not defined in config, -fields was not set.\n  - Dumping Ticket:")
+		//dump all content
+		for index, element := range ticket {
+			if element != "" {
+				fmt.Println(index, ": ", element)
+			}
+		}
+	} else {
+		fields := strings.Split(settings["summaryFields"], ",")
+		for _, f := range fields {
+			if ticket[f] != "" {
+				fmt.Print(f, ": ", ticket[f], "\n")
+			}
+		}
+	}
+
+}
+
+func showComments(settings map[string]string, tnumber string, history []string) {
+	commentids := ""
+	for _, e := range history {
+		test := strings.SplitAfter(e, "Comments added")
+		if len(test) > 1 {
+			commentids += strings.SplitAfter(e, ":")[0]
+		}
+		test = strings.SplitAfter(e, "created by")
+		if len(test) > 1 {
+			commentids += strings.SplitAfter(e, ":")[0]
+		}
+	}
+	cid := strings.Split(commentids, ":")
+	fmt.Println("\nThere are", (len(cid) - 1), "comments:")
+	for _, id := range cid {
+		if id != "" {
+			req2, err2 := http.NewRequest("GET", "http://"+settings["endpoint"]+"/REST/1.0/ticket/"+tnumber+"/history/id/"+id+"?user="+settings["username"]+"&pass="+settings["password"], nil)
+			if err2 != nil {
+				fmt.Printf("%s", err2)
+				os.Exit(1)
+			}
+			resp2, err2 := http.DefaultClient.Do(req2)
+			if err2 != nil {
+				fmt.Printf("%s", err2)
+				os.Exit(1)
+			}
+			defer resp2.Body.Close()
+			contents2, err2 := ioutil.ReadAll(resp2.Body)
+			if err2 != nil {
+				fmt.Printf("%s", err2)
+				os.Exit(1)
+			}
+			fmt.Println("-----------------------------------------------------")
+			fmt.Println(string(contents2))
+			fmt.Println("-----------------------------------------------------")
+		}
+	}
+}
+
+func showLinks(settings map[string]string, tnumber string) {
+	req, err := http.NewRequest("GET", "http://"+settings["endpoint"]+"/REST/1.0/ticket/"+tnumber+"/links/show?user="+settings["username"]+"&pass="+settings["password"], nil)
+	if err != nil {
+		fmt.Printf("%s", err)
+		os.Exit(1)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		fmt.Printf("%s", err)
+		os.Exit(1)
+	}
+	defer resp.Body.Close()
+	content, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Printf("%s", err)
+		os.Exit(1)
+	}
+	contents := strings.Split(string(content), "\n")
+	contents = append(contents[:0], contents[3:]...)
+	for _, l := range contents {
+		if l != "" {
+			linktype := strings.Split(l, ":")[0]
+			tktnumadj := strings.Split(l, "/")
+			tktnum := tktnumadj[len(tktnumadj)-1]
+			tkt := getTicket(settings, tktnum)
+			fmt.Print(linktype, ": ", tktnum, " ", tkt["Subject"], "\n")
+		}
+	}
+}
+
+func showAttachments(settings map[string]string, tnumber string) {
+	req, err := http.NewRequest("GET", "http://"+settings["endpoint"]+"/REST/1.0/ticket/"+tnumber+"/attachments?user="+settings["username"]+"&pass="+settings["password"], nil)
+	if err != nil {
+		fmt.Printf("%s", err)
+		os.Exit(1)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		fmt.Printf("%s", err)
+		os.Exit(1)
+	}
+	defer resp.Body.Close()
+	content, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Printf("%s", err)
+		os.Exit(1)
+	}
+	contents := strings.Split(string(content), "\n")
+	contents = append(contents[:0], contents[4:]...)
+	for _, l := range contents {
+		fmt.Println(strings.Trim(strings.Replace(l, "Attachments:", "", 1), " "))
+	}
 }
 
 func main() {
@@ -105,33 +297,88 @@ func main() {
 	settings["username"] = ""
 	settings["password"] = ""
 	settings["endpoint"] = ""
+	settings["summaryFields"] = ""
 	user, _ := user.Current()
+	eFunc := ""
+	cFunc := ""
+	uFunc := ""
 
 	//SETUP FLAGS
-	tNum := flag.String("t", "-1", "Ticket Number")
-	//qPtr := flag.String("q", "", "Change the Queue of a ticket.")
-	//sPtr := flag.String("s", "", "Change the Status of a ticket.")
-	//oPtr := flag.String("o", "", "Change the Owner of a ticket.")
-	//pPtr := flag.Int("p", -1, "Change the Priority of a ticket.")
-	eFunc := flag.String("e", "", "RT Server Endpoint")
-	cFunc := flag.String("config", user.HomeDir+"/.rt.d/config", "Specify Alternate Config File")
-	uFunc := flag.String("user", "", "Specify Username")
-	flag.Parse()
+	getCommand := flag.NewFlagSet("get", flag.ExitOnError)
+	getComments := getCommand.Bool("c", false, "Show Comments")
+	getHistory := getCommand.Bool("p", false, "Show History")
+	getSummary := getCommand.Bool("s", false, "Show Summary")
+	getAttach := getCommand.Bool("a", false, "Show Attachment List")
+	getLinks := getCommand.Bool("l", false, "Show Linked Tickets")
+	gettNum := getCommand.String("t", "-1", "Ticket Number")
+	geteFunc := getCommand.String("e", "", "RT Server Endpoint")
+	getcFunc := getCommand.String("config", user.HomeDir+"/.rt.d/config", "Specify Alternate Config File")
+	getuFunc := getCommand.String("user", "", "Specify Username")
 
+	updCommand := flag.NewFlagSet("update", flag.ExitOnError)
+	updtNum := updCommand.String("t", "-1", "Ticket Number")
+	updeFunc := updCommand.String("e", "", "RT Server Endpoint")
+	updcFunc := updCommand.String("config", user.HomeDir+"/.rt.d/config", "Specify Alternate Config File")
+	upduFunc := updCommand.String("user", "", "Specify Username")
+
+	searchCommand := flag.NewFlagSet("search", flag.ExitOnError)
+	searcheFunc := searchCommand.String("e", "", "RT Server Endpoint")
+	searchcFunc := searchCommand.String("config", user.HomeDir+"/.rt.d/config", "Specify Alternate Config File")
+	searchuFunc := searchCommand.String("user", "", "Specify Username")
+
+	createCommand := flag.NewFlagSet("create", flag.ExitOnError)
+	createeFunc := createCommand.String("e", "", "RT Server Endpoint")
+	createcFunc := createCommand.String("config", user.HomeDir+"/.rt.d/config", "Specify Alternate Config File")
+	createuFunc := createCommand.String("user", "", "Specify Username")
+
+	//PARSE FLAGS BASED ON SUBCOMMAND
+	switch os.Args[1] {
+	case "update":
+		updCommand.Parse(os.Args[2:])
+		eFunc = *updeFunc
+		cFunc = *updcFunc
+		uFunc = *upduFunc
+	case "get":
+		getCommand.Parse(os.Args[2:])
+		eFunc = *geteFunc
+		cFunc = *getcFunc
+		uFunc = *getuFunc
+	case "search":
+		searchCommand.Parse(os.Args[2:])
+		eFunc = *searcheFunc
+		cFunc = *searchcFunc
+		uFunc = *searchuFunc
+	case "create":
+		createCommand.Parse(os.Args[2:])
+		eFunc = *createeFunc
+		cFunc = *createcFunc
+		uFunc = *createuFunc
+	default:
+		showHelp()
+	}
+
+	//CHECK FOR HELP MENU REQUEST
+	if len(os.Args) == 1 {
+		showHelp()
+	}
+	ishelp := strings.Replace(os.Args[1], "-", "", 0)
+	if ishelp == "h" || ishelp == "help" {
+		showHelp()
+	}
 	//SETUP CONFIGS
-	if _, err := os.Stat(*cFunc); os.IsNotExist(err) {
+	if _, err := os.Stat(cFunc); os.IsNotExist(err) {
 		// THERE IS NO CONFIG FILE... CHECK IF WE HAVE AN ENDPOINT...
-		if *eFunc == "" {
+		if eFunc == "" {
 			fmt.Println("Config file does not exist and no endpoint specified! Please, either:")
 			fmt.Println("    add -e my.rt.server")
-			fmt.Println("    add endpoint: my.rt.server to", *cFunc)
+			fmt.Println("    add endpoint: my.rt.server to", cFunc)
 			os.Exit(0)
 		}
 	} else {
 		//PULL CONFIGS
-		dat, err := ioutil.ReadFile(*cFunc)
+		dat, err := ioutil.ReadFile(cFunc)
 		if err != nil {
-			fmt.Println("Unable to read from", *eFunc, "- Check permissions")
+			fmt.Println("Unable to read from", eFunc, "- Check permissions")
 			os.Exit(0)
 		}
 		content := strings.Split(string(dat), "\n")
@@ -146,24 +393,14 @@ func main() {
 	}
 
 	// ALLOW FLAGS TO OVERRIDE CONFIG FILE
-	if *eFunc != "" {
-		settings["endpoint"] = strings.Trim(*eFunc, " ")
+	if eFunc != "" {
+		settings["endpoint"] = strings.Trim(eFunc, " ")
 	}
-	if *uFunc != "" {
-		if *uFunc != settings["username"] {
+	if uFunc != "" {
+		if uFunc != settings["username"] {
 			settings["password"] = ""
 		}
-		settings["username"] = *uFunc
-	}
-
-	// IS THE TICKET NUMBER NUMERIC?
-	if _, err := strconv.Atoi(*tNum); err != nil {
-		fmt.Println("Please include a valid ticket number. rt -t 1234567")
-		os.Exit(0)
-	}
-	if t, _ := strconv.Atoi(*tNum); t < 0 {
-		fmt.Println("Please include a valid ticket number.  rt -t 1234567")
-		os.Exit(0)
+		settings["username"] = uFunc
 	}
 
 	// DO WE HAVE LOGIN INFORMATION FOR THE ENDPOINT?
@@ -182,29 +419,22 @@ func main() {
 
 	}
 
-	// LETS GET THE CURRENT TICKET INFORMATION MAPPED
-	ticket := getTicket(*tNum, settings)
-
-	// WAS THAT A VALID TICKET? (split the key for line 2 on phrase does not, if #ofElements >1 error)
-	ec := string(reflect.ValueOf(ticket).MapKeys()[1].Interface().(string))
-	if len(strings.SplitAfter(ec, " does not ")) > 1 {
-		fmt.Println("Ticket number", *tNum, "does not exist.")
-		os.Exit(0)
-	}
-	if len(strings.SplitAfter(ec, "username or password")) > 1 {
-		fmt.Println("Username/Password Incorrect.")
-		os.Exit(0)
-	}
-
 	// WE HAVE A VALID TICKET NUMBER AND DATA...
-	fmt.Println("")
-	fmt.Println("Settings:")
-	for index, element := range settings {
-		fmt.Print("settings[", index, "]='", element, "'\n")
+	//rt update
+	//rt search
+	//rt get
+	//rt create
+	action := os.Args[1]
+	switch action {
+	case "get":
+		showTicket(settings, strings.Trim(string(*gettNum), " "), *getComments, *getHistory, *getSummary, *getLinks, *getAttach)
+	case "update":
+		updateTicket(settings, strings.Trim(string(*updtNum), " "))
+	case "search":
+		fmt.Println("Feature to come!")
+	case "create":
+		fmt.Println("Feature to come!")
+	default:
+		showHelp()
 	}
-	fmt.Println("Ticket Data:")
-	for index, element := range ticket {
-		fmt.Print("ticket[", index, "]='", element, "'\n")
-	}
-	fmt.Println("|done|")
 }
