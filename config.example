@@ -1,0 +1,4 @@
+username: jsmith
+password: secret
+endpoint: my.rtserver.com
+summaryFields: Queue,Owner,Creator,Subject,Status,Priority,Created,LastUpdated
