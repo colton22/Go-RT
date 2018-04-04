@@ -173,6 +173,9 @@ func showTicket(settings map[string]string, tnumber string, comments bool, histo
 	if attachments {
 		showAttachments(settings, tnumber)
 	}
+	if !attachments && !links && !history && !comments && !sum {
+		showSummary(settings, tnumber)
+	}
 	os.Exit(0)
 }
 
@@ -311,6 +314,7 @@ func main() {
 	getAttach := getCommand.Bool("a", false, "Show Attachment List")
 	getLinks := getCommand.Bool("l", false, "Show Linked Tickets")
 	gettNum := getCommand.String("t", "-1", "Ticket Number")
+	getFields := getCommand.String("fields", "", "List of custom fields to show in summary, sep ','")
 	geteFunc := getCommand.String("e", "", "RT Server Endpoint")
 	getcFunc := getCommand.String("config", user.HomeDir+"/.rt.d/config", "Specify Alternate Config File")
 	getuFunc := getCommand.String("user", "", "Specify Username")
@@ -401,6 +405,9 @@ func main() {
 			settings["password"] = ""
 		}
 		settings["username"] = uFunc
+	}
+	if *getFields != "" {
+		settings["summaryFields"] = *getFields
 	}
 
 	// DO WE HAVE LOGIN INFORMATION FOR THE ENDPOINT?
