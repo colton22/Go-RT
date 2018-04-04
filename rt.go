@@ -143,16 +143,6 @@ func getTicket(settings map[string]string, tnumber string) map[string]string {
 	return ticket
 }
 
-func showHelp() {
-	//HELP MENU
-	fmt.Println("This is the help menu")
-	os.Exit(0)
-}
-
-func updateTicket(settings map[string]string, tnumber string) {
-	fmt.Println("Will update ", tnumber)
-}
-
 func showTicket(settings map[string]string, tnumber string, comments bool, history bool, sum bool, links bool, attachments bool) {
 	if sum {
 		showSummary(settings, tnumber)
@@ -293,7 +283,81 @@ func showAttachments(settings map[string]string, tnumber string) {
 	}
 }
 
+func updateTicket(settings map[string]string, tnumber string) {
+	fmt.Println("Will update ", tnumber)
+}
+
+func showHelp() {
+	//HELP MENU
+	fmt.Println("Usage: rt <subcommand> [globaloptions] [options]\n")
+	fmt.Println("  Sub-commands (rt <subcommand> -h)")
+	fmt.Println("    GET:    Pull Individual Ticket Data")
+	fmt.Println("    UPDATE: Update Individual Ticket Data")
+	fmt.Println("    CREATE: Create a Ticket")
+	fmt.Println("    SEARCH: Search for tickets with given criteria")
+	fmt.Println("\n  Global Options")
+	fmt.Println("    -config [string]: Alt config file (~/.rt.d/config)")
+	fmt.Println("    -user [string]:   Specify username for Endpoint")
+	fmt.Println("    -e [string]:      Endpoint (ie: my.rtserver.com)")
+	fmt.Println("")
+	os.Exit(0)
+}
+
+func showGetHelp() {
+	fmt.Println("Usage: rt get [globaloptions] -t <ticketnum> [options]\n")
+	fmt.Println("  Global Options")
+	fmt.Println("    -config [string]: Alt config file (~/.rt.d/config)")
+	fmt.Println("    -user [string]:   Specify username for Endpoint")
+	fmt.Println("    -e [string]:      Endpoint (ie: my.rtserver.com)")
+	fmt.Println("\n  Options")
+	fmt.Println("    -t: Ticket Number (required)")
+	fmt.Println("    -p: Show Ticket History")
+	fmt.Println("    -c: Show Ticket Comments")
+	fmt.Println("    -a: List Ticket Attachments")
+	fmt.Println("    -l: List Related Tickets")
+	fmt.Println("    -s: Show Ticket Summary (default)")
+	fmt.Println("")
+	os.Exit(0)
+}
+
+func showUpdateHelp() {
+	fmt.Println("Usage: rt update [globaloptions] [options]\n")
+	fmt.Println("  Global Options")
+	fmt.Println("    -config [string]: Alt config file (~/.rt.d/config)")
+	fmt.Println("    -user [string]:   Specify username for Endpoint")
+	fmt.Println("    -e [string]:      Endpoint (ie: my.rtserver.com)")
+	fmt.Println("")
+
+	os.Exit(0)
+}
+
+func showCreateHelp() {
+	fmt.Println("Usage: rt create [globaloptions] [options]\n")
+	fmt.Println("  Global Options")
+	fmt.Println("    -config [string]: Alt config file (~/.rt.d/config)")
+	fmt.Println("    -user [string]:   Specify username for Endpoint")
+	fmt.Println("    -e [string]:      Endpoint (ie: my.rtserver.com)")
+	fmt.Println("")
+
+	os.Exit(0)
+}
+
+func showSearchHelp() {
+	fmt.Println("Usage: rt search [globaloptions] [options]\n")
+	fmt.Println("  Global Options")
+	fmt.Println("    -config [string]: Alt config file (~/.rt.d/config)")
+	fmt.Println("    -user [string]:   Specify username for Endpoint")
+	fmt.Println("    -e [string]:      Endpoint (ie: my.rtserver.com)")
+	fmt.Println("")
+
+	os.Exit(0)
+}
+
 func main() {
+	//CHECK FOR AT LEAST ONE ARGUMENT
+	if len(os.Args) == 1 {
+		showHelp()
+	}
 
 	//SETUP VARIABLES
 	settings := map[string]string{}
@@ -313,6 +377,7 @@ func main() {
 	getSummary := getCommand.Bool("s", false, "Show Summary")
 	getAttach := getCommand.Bool("a", false, "Show Attachment List")
 	getLinks := getCommand.Bool("l", false, "Show Linked Tickets")
+	getHelp := getCommand.Bool("h", false, "Show Help Menu")
 	gettNum := getCommand.String("t", "-1", "Ticket Number")
 	getFields := getCommand.String("fields", "", "List of custom fields to show in summary, sep ','")
 	geteFunc := getCommand.String("e", "", "RT Server Endpoint")
@@ -320,17 +385,20 @@ func main() {
 	getuFunc := getCommand.String("user", "", "Specify Username")
 
 	updCommand := flag.NewFlagSet("update", flag.ExitOnError)
+	updHelp := updCommand.Bool("h", false, "Show Help Menu")
 	updtNum := updCommand.String("t", "-1", "Ticket Number")
 	updeFunc := updCommand.String("e", "", "RT Server Endpoint")
 	updcFunc := updCommand.String("config", user.HomeDir+"/.rt.d/config", "Specify Alternate Config File")
 	upduFunc := updCommand.String("user", "", "Specify Username")
 
 	searchCommand := flag.NewFlagSet("search", flag.ExitOnError)
+	searchHelp := searchCommand.Bool("h", false, "Show Help Menu")
 	searcheFunc := searchCommand.String("e", "", "RT Server Endpoint")
 	searchcFunc := searchCommand.String("config", user.HomeDir+"/.rt.d/config", "Specify Alternate Config File")
 	searchuFunc := searchCommand.String("user", "", "Specify Username")
 
 	createCommand := flag.NewFlagSet("create", flag.ExitOnError)
+	createHelp := createCommand.Bool("h", false, "Show Help Menu")
 	createeFunc := createCommand.String("e", "", "RT Server Endpoint")
 	createcFunc := createCommand.String("config", user.HomeDir+"/.rt.d/config", "Specify Alternate Config File")
 	createuFunc := createCommand.String("user", "", "Specify Username")
@@ -360,15 +428,20 @@ func main() {
 	default:
 		showHelp()
 	}
+	//CHECK FOR INDEPENDENT HELP REQUESTS
+	if *getHelp {
+		showGetHelp()
+	}
+	if *updHelp {
+		showUpdateHelp()
+	}
+	if *searchHelp {
+		showSearchHelp()
+	}
+	if *createHelp {
+		showCreateHelp()
+	}
 
-	//CHECK FOR HELP MENU REQUEST
-	if len(os.Args) == 1 {
-		showHelp()
-	}
-	ishelp := strings.Replace(os.Args[1], "-", "", 0)
-	if ishelp == "h" || ishelp == "help" {
-		showHelp()
-	}
 	//SETUP CONFIGS
 	if _, err := os.Stat(cFunc); os.IsNotExist(err) {
 		// THERE IS NO CONFIG FILE... CHECK IF WE HAVE AN ENDPOINT...
