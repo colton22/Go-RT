@@ -76,3 +76,24 @@ Usage: rt search [globaloptions] [options]
 ```  
 The SEARCH function is a quick way to query tickets matching criteria. All criteria is hardcoded to `{Owner or Owner} AND {Queue or Queue} AND {Status or Status} AND {Title or Title}` This will then pull a list of tickets matching specified criteria. As with most flags here, you can specify a comma seperated list to query. Also to note, the `-d` option allows you to just pull the query link (your password will be plain-text!)
   For example: find all tickets matching PROBLEM and owned by john or jack: `rt search -t PROBLEM -o john,jack`  
+
+### CREATE FUNCTION (TODO)
+```
+This is not yet developed or scoped, Soon to come!
+```
+
+### UPDATE FUNCTION (TODO)
+Scope of Function:
+```
+Change Queues
+Change Status
+Change Priority
+Change Ownership (include stealing)
+Change Subject
+Add Comment
+Change Custom Fields
+Append Custom Fields
+Merge Tickets
+Link Tickets
+Unlink Tickets
+```
