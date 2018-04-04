@@ -19,14 +19,20 @@ Usage: rt <subcommand> [globaloptions] [options]
 ```  
 The Global Options and more are able to be stored in a config file of your choosing. The default config file is located under `/home/username/.rt.d/config` and can be changed by using the -config flag. Inside the config file you may specify a few 'sticky' settings:  
 You can throw server settings:  
-`endpoint: my.rtserver.com  
+```
+endpoint: my.rtserver.com  
 username: jsmith  
-password: secret`  
+password: secret
+```
 as well, you can add formatting settings which come in handy using GET when you only want to see specifc information about a ticket:  
-`summaryFields: Queue,Status,Subject,Created,Creator`  
+```
+summaryFields: Queue,Status,Subject,Created,Creator
+```
 as well as aliases for queues you use:  
-`lqn:LongQueueName  
-rlqn:ReallyLongQueueName`  
+```
+lqn:LongQueueName  
+rlqn:ReallyLongQueueName
+```
   
 ### GET FUNCTION  
   
@@ -47,7 +53,7 @@ Usage: rt get [globaloptions] -t <ticketnum> [options]
     -l: List Related Tickets  
     -s: Show Ticket Summary (default)  
 ```  
-The GET function is really just a way to 'read' ticket information when you have a subject ticket. You must specify `-t [int]` to choose a ticket to get information about. If no flags other than -t are chosen, the program will assume you just want a summary. If you only want to see one field you may specify `-f FieldName,Queue` to only show the selected field(s). The -l option will make an API call for each related ticket, showing the relationship, ticket number and Subject of Linked tickets.  
+The GET function is really just a way to 'read' ticket information when you have a subject ticket. You must specify `-t [int]` to choose a ticket to get information about. If no flags other than -t are chosen, the program will assume you just want a summary. If you only want to see one field you may specify `-f FieldName,Queue` to only show the selected field(s). The `-l` option will make an API call for each related ticket, showing the relationship, ticket number and Subject of Linked tickets.  
   
 ### SEARCH FUNCTION  
   
@@ -68,5 +74,5 @@ Usage: rt search [globaloptions] [options]
       ie: rt search -o jsmith,jdoe -s new,open -q q1,q2  
       ie: rt search -s open -t 'text 1',txt,'text 2'  
 ```  
-The SEARCH function is a quick way to query tickets matching criteria. All criteria is hardcoded to `{Owner or Owner} AND {Queue or Queue} AND {Status or Status} AND {Title or Title}` This will then pull a list of tickets matching specified criteria. As with most flags here, you can specify a comma seperated list to query.  
-  for example, find all tickets matching PROBLEM and owned by john or jack: `rt search -t PROBLEM -o john,jack`  
+The SEARCH function is a quick way to query tickets matching criteria. All criteria is hardcoded to `{Owner or Owner} AND {Queue or Queue} AND {Status or Status} AND {Title or Title}` This will then pull a list of tickets matching specified criteria. As with most flags here, you can specify a comma seperated list to query. Also to note, the `-d` option allows you to just pull the query link (your password will be plain-text!)
+  For example: find all tickets matching PROBLEM and owned by john or jack: `rt search -t PROBLEM -o john,jack`  
