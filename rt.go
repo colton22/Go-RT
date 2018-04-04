@@ -108,7 +108,7 @@ func main() {
 	user, _ := user.Current()
 
 	//SETUP FLAGS
-	tNum := flag.String("t", "0", "Ticket Number")
+	tNum := flag.String("t", "-1", "Ticket Number")
 	//qPtr := flag.String("q", "", "Change the Queue of a ticket.")
 	//sPtr := flag.String("s", "", "Change the Status of a ticket.")
 	//oPtr := flag.String("o", "", "Change the Owner of a ticket.")
@@ -156,6 +156,16 @@ func main() {
 		settings["username"] = *uFunc
 	}
 
+	// IS THE TICKET NUMBER NUMERIC?
+	if _, err := strconv.Atoi(*tNum); err != nil {
+		fmt.Println("Please include a valid ticket number. rt -t 1234567")
+		os.Exit(0)
+	}
+	if t, _ := strconv.Atoi(*tNum); t < 0 {
+		fmt.Println("Please include a valid ticket number.  rt -t 1234567")
+		os.Exit(0)
+	}
+
 	// DO WE HAVE LOGIN INFORMATION FOR THE ENDPOINT?
 	if settings["username"] == "" || settings["password"] == "" {
 		fmt.Println("Requesting login information for:", settings["endpoint"])
@@ -170,12 +180,6 @@ func main() {
 			fmt.Print("\n")
 		}
 
-	}
-
-	// IS THE TICKET NUMBER NUMERIC?
-	if _, err := strconv.Atoi(*tNum); err != nil {
-		fmt.Println("Please include a valid ticket number. rtupdate -t 1234567")
-		os.Exit(1)
 	}
 
 	// LETS GET THE CURRENT TICKET INFORMATION MAPPED
