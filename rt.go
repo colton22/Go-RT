@@ -172,7 +172,7 @@ func showTicket(settings map[string]string, tnumber string, comments bool, histo
 func showSummary(settings map[string]string, tnumber string) {
 	ticket := getTicket(settings, tnumber)
 	if settings["summaryFields"] == "" {
-		fmt.Println("summaryFields is not defined in config, -fields was not set.\n  - Dumping Ticket:")
+		fmt.Println("summaryFields is not defined in config, -f was not set.\n  - Dumping Ticket:")
 		//dump all content
 		for index, element := range ticket {
 			if element != "" {
@@ -283,8 +283,69 @@ func showAttachments(settings map[string]string, tnumber string) {
 	}
 }
 
-func updateTicket(settings map[string]string, tnumber string) {
-	fmt.Println("Will update ", tnumber)
+func rtsearch(settings map[string]string, owners string, queues string, status string, title string, showURL bool) {
+	if owners == "" && queues == "" && status == "" && title == "" {
+		fmt.Println("No Search Criteria Specified. Haulting Search.")
+		os.Exit(0)
+	}
+	//We have some sort of search criteria, lets build the query
+	query_o := ""
+	query_q := ""
+	query_s := ""
+	query := "http://rt.llnw.com/REST/1.0/search/ticket?user=" + settings["username"] + "&pass=" + settings["password"] + "&query="
+	o := strings.Split(owners, ",")
+	q := strings.Split(queues, ",")
+	s := strings.Split(status, ",")
+	for _, owner := range o {
+		query_o = query_o + "Owner = '" + owner + "' OR "
+	}
+	for _, queue := range q {
+		if settings[queue] != "" {
+			queue = settings[queue]
+		}
+		query_q = query_q + "Queue = '" + queue + "' OR "
+	}
+	for _, stat := range s {
+		query_s = query_s + "Status = '" + stat + "' OR "
+	}
+	query_o = "(" + strings.TrimRight(query_o, " OR ") + ")"
+	query_q = "(" + strings.TrimRight(query_q, " OR ") + ")"
+	query_s = "(" + strings.TrimRight(query_s, " OR ") + ")"
+	if query_o != "(Owner = '')" {
+		query = query + query_o + " AND "
+	}
+	if query_q != "(Queue = '')" {
+		query = query + query_q + " AND "
+	}
+	if query_s != "(Status = '')" {
+		query = query + query_s + " AND "
+	}
+	if title != "" {
+		query = query + "Subject LIKE '" + title + "' AND "
+	}
+	query = strings.TrimRight(query, " AND ")
+	query = strings.Replace(strings.Replace(query, "'", "%27", -1), " ", "%20", -1)
+	//START SEARCH
+	if showURL {
+		fmt.Println(query)
+	}
+	req, err := http.NewRequest("GET", query, nil)
+	if err != nil {
+		fmt.Printf("%s", err)
+		os.Exit(1)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		fmt.Printf("%s", err)
+		os.Exit(1)
+	}
+	defer resp.Body.Close()
+	content, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Printf("%s", err)
+		os.Exit(1)
+	}
+	fmt.Println(string(content))
 }
 
 func showHelp() {
@@ -310,6 +371,7 @@ func showGetHelp() {
 	fmt.Println("    -user [string]:   Specify username for Endpoint")
 	fmt.Println("    -e [string]:      Endpoint (ie: my.rtserver.com)")
 	fmt.Println("\n  Options")
+	fmt.Println("    -f: Specify Custom Fields for Summary (csv list)")
 	fmt.Println("    -t: Ticket Number (required)")
 	fmt.Println("    -p: Show Ticket History")
 	fmt.Println("    -c: Show Ticket Comments")
@@ -326,8 +388,9 @@ func showUpdateHelp() {
 	fmt.Println("    -config [string]: Alt config file (~/.rt.d/config)")
 	fmt.Println("    -user [string]:   Specify username for Endpoint")
 	fmt.Println("    -e [string]:      Endpoint (ie: my.rtserver.com)")
-	fmt.Println("")
+	fmt.Println("\n  Options")
 
+	fmt.Println("")
 	os.Exit(0)
 }
 
@@ -379,14 +442,14 @@ func main() {
 	getLinks := getCommand.Bool("l", false, "Show Linked Tickets")
 	getHelp := getCommand.Bool("h", false, "Show Help Menu")
 	gettNum := getCommand.String("t", "-1", "Ticket Number")
-	getFields := getCommand.String("fields", "", "List of custom fields to show in summary, sep ','")
+	getFields := getCommand.String("f", "", "List of custom fields to show in summary, sep ','")
 	geteFunc := getCommand.String("e", "", "RT Server Endpoint")
 	getcFunc := getCommand.String("config", user.HomeDir+"/.rt.d/config", "Specify Alternate Config File")
 	getuFunc := getCommand.String("user", "", "Specify Username")
 
 	updCommand := flag.NewFlagSet("update", flag.ExitOnError)
 	updHelp := updCommand.Bool("h", false, "Show Help Menu")
-	updtNum := updCommand.String("t", "-1", "Ticket Number")
+	//	updtNum := updCommand.String("t", "-1", "Ticket Number")
 	updeFunc := updCommand.String("e", "", "RT Server Endpoint")
 	updcFunc := updCommand.String("config", user.HomeDir+"/.rt.d/config", "Specify Alternate Config File")
 	upduFunc := updCommand.String("user", "", "Specify Username")
@@ -396,6 +459,11 @@ func main() {
 	searcheFunc := searchCommand.String("e", "", "RT Server Endpoint")
 	searchcFunc := searchCommand.String("config", user.HomeDir+"/.rt.d/config", "Specify Alternate Config File")
 	searchuFunc := searchCommand.String("user", "", "Specify Username")
+	searchOwners := searchCommand.String("o", "", "Search for Tickets Maching Owner")
+	searchQueues := searchCommand.String("q", "", "Search for Tickets in Specified Queues")
+	searchStatus := searchCommand.String("s", "", "Search for Tickets Maching Status")
+	searchTitle := searchCommand.String("t", "", "Search for Tickets Matching Title")
+	searchShowURL := searchCommand.Bool("d", false, "Show Query, Then Search")
 
 	createCommand := flag.NewFlagSet("create", flag.ExitOnError)
 	createHelp := createCommand.Bool("h", false, "Show Help Menu")
@@ -500,18 +568,14 @@ func main() {
 	}
 
 	// WE HAVE A VALID TICKET NUMBER AND DATA...
-	//rt update
-	//rt search
-	//rt get
-	//rt create
 	action := os.Args[1]
 	switch action {
 	case "get":
 		showTicket(settings, strings.Trim(string(*gettNum), " "), *getComments, *getHistory, *getSummary, *getLinks, *getAttach)
 	case "update":
-		updateTicket(settings, strings.Trim(string(*updtNum), " "))
-	case "search":
 		fmt.Println("Feature to come!")
+	case "search":
+		rtsearch(settings, *searchOwners, *searchQueues, *searchStatus, *searchTitle, *searchShowURL)
 	case "create":
 		fmt.Println("Feature to come!")
 	default:
