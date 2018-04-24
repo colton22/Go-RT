@@ -145,9 +145,9 @@ func getTicket(settings map[string]string, tnumber string) map[string]string {
 	return ticket
 }
 
-func showTicket(settings map[string]string, tnumber string, comments bool, history bool, sum bool, links bool, attachments bool) {
-	if sum {
-		showSummary(settings, tnumber)
+func showTicket(settings map[string]string, tnumber string, comments bool, history bool, sum bool, links bool, attachments bool, verb bool) {
+	if sum || verb {
+		showSummary(settings, tnumber, verb)
 		fmt.Println("")
 	}
 	if comments {
@@ -165,16 +165,23 @@ func showTicket(settings map[string]string, tnumber string, comments bool, histo
 	if attachments {
 		showAttachments(settings, tnumber)
 	}
-	if !attachments && !links && !history && !comments && !sum {
-		showSummary(settings, tnumber)
+	if !attachments && !links && !history && !comments && !sum && !verb {
+		showSummary(settings, tnumber, verb)
 	}
 	os.Exit(0)
 }
 
-func showSummary(settings map[string]string, tnumber string) {
+func showSummary(settings map[string]string, tnumber string, verb bool) {
 	ticket := getTicket(settings, tnumber)
+    if verb {
+        settings["summaryFields"] = ""
+    }
 	if settings["summaryFields"] == "" {
-		fmt.Println("summaryFields is not defined in config, -f was not set.\n  - Dumping Ticket:")
+		if !verb {
+            fmt.Println("summaryFields is not defined in config, -f was not set.\n  - Dumping Ticket:")
+        } else {
+            fmt.Println("Verbose Specified. Dumping Ticket:")
+        }
 		//dump all content
 		for index, element := range ticket {
 			if element != "" {
@@ -388,6 +395,7 @@ func showGetHelp() {
 	fmt.Println("    -a: List Ticket Attachments")
 	fmt.Println("    -l: List Related Tickets")
 	fmt.Println("    -s: Show Ticket Summary (default)")
+    fmt.Println("    -v: implies -s, Dump All Summary Data")
 	fmt.Println("")
 	os.Exit(0)
 }
@@ -455,6 +463,7 @@ func main() {
 	getComments := getCommand.Bool("c", false, "Show Comments")
 	getHistory := getCommand.Bool("p", false, "Show History")
 	getSummary := getCommand.Bool("s", false, "Show Summary")
+    getVerbose := getCommand.Bool("v", false, "Show Verbose Summary")
 	getAttach := getCommand.Bool("a", false, "Show Attachment List")
 	getLinks := getCommand.Bool("l", false, "Show Linked Tickets")
 	getHelp := getCommand.Bool("h", false, "Show Help Menu")
@@ -588,7 +597,7 @@ func main() {
 	action := os.Args[1]
 	switch action {
 	case "get":
-		showTicket(settings, strings.Trim(string(*gettNum), " "), *getComments, *getHistory, *getSummary, *getLinks, *getAttach)
+		showTicket(settings, strings.Trim(string(*gettNum), " "), *getComments, *getHistory, *getSummary, *getLinks, *getAttach, *getVerbose)
 	case "update":
 		fmt.Println("Feature to come!")
 	case "search":
