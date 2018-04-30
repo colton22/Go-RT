@@ -51,6 +51,7 @@ Usage: rt get [globaloptions] -t <ticketnum> [options]
     -c: Show Ticket Comments  
     -a: List Ticket Attachments  
     -l: List Related Tickets  
+    -v: Dump All Ticket Data
     -s: Show Ticket Summary (default)  
 ```  
 The GET function is really just a way to 'read' ticket information when you have a subject ticket. You must specify `-t [int]` to choose a ticket to get information about. If no flags other than -t are chosen, the program will assume you just want a summary. If you only want to see one field you may specify `-f FieldName,Queue` to only show the selected field(s). The `-l` option will make an API call for each related ticket, showing the relationship, ticket number and Subject of Linked tickets.  
