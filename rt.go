@@ -66,45 +66,37 @@ func getPassword(prompt string) string {
 	return strings.TrimSpace(text)
 }
 
-func queryHistory(settings map[string]string, tnumber string) []string {
-	req, err := http.NewRequest("GET", "http://"+settings["endpoint"]+"/REST/1.0/ticket/"+tnumber+"/history?user="+settings["username"]+"&pass="+settings["password"], nil)
+// THANK YOU Joe Harnish
+func queryRT(method string,URL string) string {
+	req, err := http.NewRequest("GET", URL, nil)
 	if err != nil {
-		fmt.Println("Error 1")
+		fmt.Println("Error making request: ", err, " For URL ", URL)
 		os.Exit(1)
 	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		fmt.Printf("%s", err)
+		fmt.Println("Error Executing request: ", err)
 		os.Exit(1)
 	}
 	defer resp.Body.Close()
-	contents, err := ioutil.ReadAll(resp.Body)
+	outputbyte, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Printf("%s", err)
+		fmt.Println("Read Error: ", err)
 		os.Exit(1)
 	}
+
+	return string(outputbyte)
+}
+
+func queryHistory(settings map[string]string, tnumber string) []string {
+	contents := queryRT("GET", "http://"+settings["endpoint"]+"/REST/1.0/ticket/"+tnumber+"/history?user="+settings["username"]+"&pass="+settings["password"])
 	content := strings.Split(string(contents), "\n")
 	content = append(content[:0], content[1:]...)
 	return append(content[:0], content[1:]...)
 }
 
 func queryTicket(settings map[string]string, ticket string) map[string]string {
-	req, err := http.NewRequest("GET", "http://"+settings["endpoint"]+"/REST/1.0/ticket/"+ticket+"/show?user="+settings["username"]+"&pass="+settings["password"], nil)
-	if err != nil {
-		fmt.Println("Error 1")
-		os.Exit(1)
-	}
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		fmt.Printf("%s", err)
-		os.Exit(1)
-	}
-	defer resp.Body.Close()
-	contents, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Printf("%s", err)
-		os.Exit(1)
-	}
+	contents := queryRT("GET", "http://"+settings["endpoint"]+"/REST/1.0/ticket/"+ticket+"/show?user="+settings["username"]+"&pass="+settings["password"])
 	content := strings.Split(string(contents), "\n")
 	cont := map[string]string{}
 	for _, element := range content {
@@ -217,22 +209,7 @@ func showComments(settings map[string]string, tnumber string, history []string) 
 	fmt.Println("\nThere are", (len(cid) - 1), "comments:")
 	for _, id := range cid {
 		if id != "" {
-			req2, err2 := http.NewRequest("GET", "http://"+settings["endpoint"]+"/REST/1.0/ticket/"+tnumber+"/history/id/"+id+"?user="+settings["username"]+"&pass="+settings["password"], nil)
-			if err2 != nil {
-				fmt.Printf("%s", err2)
-				os.Exit(1)
-			}
-			resp2, err2 := http.DefaultClient.Do(req2)
-			if err2 != nil {
-				fmt.Printf("%s", err2)
-				os.Exit(1)
-			}
-			defer resp2.Body.Close()
-			contents2, err2 := ioutil.ReadAll(resp2.Body)
-			if err2 != nil {
-				fmt.Printf("%s", err2)
-				os.Exit(1)
-			}
+			contents2 := queryRT("GET", "http://"+settings["endpoint"]+"/REST/1.0/ticket/"+tnumber+"/history/id/"+id+"?user="+settings["username"]+"&pass="+settings["password"])
 			fmt.Println("-----------------------------------------------------")
 			fmt.Println(string(contents2))
 			fmt.Println("-----------------------------------------------------")
@@ -241,22 +218,7 @@ func showComments(settings map[string]string, tnumber string, history []string) 
 }
 
 func showLinks(settings map[string]string, tnumber string) {
-	req, err := http.NewRequest("GET", "http://"+settings["endpoint"]+"/REST/1.0/ticket/"+tnumber+"/links/show?user="+settings["username"]+"&pass="+settings["password"], nil)
-	if err != nil {
-		fmt.Printf("%s", err)
-		os.Exit(1)
-	}
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		fmt.Printf("%s", err)
-		os.Exit(1)
-	}
-	defer resp.Body.Close()
-	content, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Printf("%s", err)
-		os.Exit(1)
-	}
+	content := queryRT("GET", "http://"+settings["endpoint"]+"/REST/1.0/ticket/"+tnumber+"/links/show?user="+settings["username"]+"&pass="+settings["password"])
 	contents := strings.Split(string(content), "\n")
 	contents = append(contents[:0], contents[3:]...)
 	for _, l := range contents {
@@ -271,22 +233,7 @@ func showLinks(settings map[string]string, tnumber string) {
 }
 
 func showAttachments(settings map[string]string, tnumber string) {
-	req, err := http.NewRequest("GET", "http://"+settings["endpoint"]+"/REST/1.0/ticket/"+tnumber+"/attachments?user="+settings["username"]+"&pass="+settings["password"], nil)
-	if err != nil {
-		fmt.Printf("%s", err)
-		os.Exit(1)
-	}
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		fmt.Printf("%s", err)
-		os.Exit(1)
-	}
-	defer resp.Body.Close()
-	content, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Printf("%s", err)
-		os.Exit(1)
-	}
+	content := queryRT("GET", "http://"+settings["endpoint"]+"/REST/1.0/ticket/"+tnumber+"/attachments?user="+settings["username"]+"&pass="+settings["password"])
 	contents := strings.Split(string(content), "\n")
 	contents = append(contents[:0], contents[4:]...)
 	for _, l := range contents {
@@ -348,22 +295,7 @@ func rtsearch(settings map[string]string, owners string, queues string, status s
 		fmt.Println(query)
 		os.Exit(0)
 	}
-	req, err := http.NewRequest("GET", query, nil)
-	if err != nil {
-		fmt.Printf("%s", err)
-		os.Exit(1)
-	}
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		fmt.Printf("%s", err)
-		os.Exit(1)
-	}
-	defer resp.Body.Close()
-	content, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Printf("%s", err)
-		os.Exit(1)
-	}
+    content := queryRT("GET",query);
 	fmt.Println(string(content))
 }
 
