@@ -1,16 +1,18 @@
 package main
 
-import "reflect"
-import "bufio"
-import "syscall"
-import "fmt"
-import "net/http"
-import "flag"
-import "io/ioutil"
-import "os"
-import "os/user"
-import "strings"
-import "strconv"
+import (
+  "reflect"
+  "bufio"
+  "syscall"
+  "fmt"
+  "net/http"
+  "flag"
+  "io/ioutil"
+  "os"
+  "os/user"
+  "strings"
+  "strconv"
+)
 
 // THANK YOU Joe Linoff @ STACKOVERFLOW
 func getPassword(prompt string) string {
@@ -367,8 +369,8 @@ func rtsearch(settings map[string]string, owners string, queues string, status s
 
 func showHelp() {
 	//HELP MENU
-	fmt.Println("Usage: rt <subcommand> [globaloptions] [options]\n")
-	fmt.Println("  Sub-commands (rt <subcommand> -h)")
+	fmt.Println("Usage: rt <subcommand> [globaloptions] [options]")
+	fmt.Println("\n  Sub-commands (rt <subcommand> -h)")
 	fmt.Println("    GET:    Pull Individual Ticket Data")
 	fmt.Println("    UPDATE: Update Individual Ticket Data")
 	fmt.Println("    CREATE: Create a Ticket")
@@ -382,8 +384,8 @@ func showHelp() {
 }
 
 func showGetHelp() {
-	fmt.Println("Usage: rt get [globaloptions] -t <ticketnum> [options]\n")
-	fmt.Println("  Global Options")
+	fmt.Println("Usage: rt get [globaloptions] -t <ticketnum> [options]")
+	fmt.Println("\n  Global Options")
 	fmt.Println("    -config [string]: Alt config file (~/.rt.d/config)")
 	fmt.Println("    -user [string]:   Specify username for Endpoint")
 	fmt.Println("    -e [string]:      Endpoint (ie: my.rtserver.com)")
@@ -401,8 +403,8 @@ func showGetHelp() {
 }
 
 func showUpdateHelp() {
-	fmt.Println("Usage: rt update [globaloptions] [options]\n")
-	fmt.Println("  Global Options")
+	fmt.Println("Usage: rt update [globaloptions] [options]")
+	fmt.Println("\n  Global Options")
 	fmt.Println("    -config [string]: Alt config file (~/.rt.d/config)")
 	fmt.Println("    -user [string]:   Specify username for Endpoint")
 	fmt.Println("    -e [string]:      Endpoint (ie: my.rtserver.com)")
@@ -413,8 +415,8 @@ func showUpdateHelp() {
 }
 
 func showCreateHelp() {
-	fmt.Println("Usage: rt create [globaloptions] [options]\n")
-	fmt.Println("  Global Options")
+	fmt.Println("Usage: rt create [globaloptions] [options]")
+	fmt.Println("\n  Global Options")
 	fmt.Println("    -config [string]: Alt config file (~/.rt.d/config)")
 	fmt.Println("    -user [string]:   Specify username for Endpoint")
 	fmt.Println("    -e [string]:      Endpoint (ie: my.rtserver.com)")
@@ -424,8 +426,8 @@ func showCreateHelp() {
 }
 
 func showSearchHelp() {
-	fmt.Println("Usage: rt search [globaloptions] [options]\n")
-	fmt.Println("  Global Options")
+	fmt.Println("Usage: rt search [globaloptions] [options]")
+	fmt.Println("\n  Global Options")
 	fmt.Println("    -config [string]: Alt config file (~/.rt.d/config)")
 	fmt.Println("    -user [string]:   Specify username for Endpoint")
 	fmt.Println("    -e [string]:      Endpoint (ie: my.rtserver.com)")
