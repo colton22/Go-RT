@@ -115,7 +115,7 @@ func getTicket(settings map[string]string, tnumber string) map[string]string {
 	// IS THE TICKET NUMBER NUMERIC?
 	t, err := strconv.Atoi(tnumber)
 	if err != nil {
-		fmt.Println("Ticket Number is not numeric!\nPlease include a valid ticket number. rt -t 1234567")
+		fmt.Println("Ticket Number (", tnumber, ") is not numeric!\nPlease include a valid ticket number. rt -t 1234567")
 		os.Exit(0)
 	}
 	if t == -1 {
@@ -154,7 +154,6 @@ func showTicket(settings map[string]string, tnumber string, comments bool, histo
 	}
 	if links {
 		showLinks(settings, tnumber)
-		fmt.Println("")
 	}
 	if attachments {
 		showAttachments(settings, tnumber)
@@ -223,11 +222,11 @@ func showLinks(settings map[string]string, tnumber string) {
 	contents = append(contents[:0], contents[3:]...)
 	for _, l := range contents {
 		if l != "" {
-			linktype := strings.Split(l, ":")[0]
+			//linktype := strings.Split(l, ":")[0]
 			tktnumadj := strings.Split(l, "/")
-			tktnum := tktnumadj[len(tktnumadj)-1]
+			tktnum := strings.Replace(tktnumadj[len(tktnumadj)-1],",","",-1)
 			tkt := getTicket(settings, tktnum)
-			fmt.Print(linktype, ": ", tktnum, " ", tkt["Subject"], "\n")
+			fmt.Print(" ", tktnum, " ", tkt["Subject"], " [", tkt["Status"], "] [", tkt["Owner"], "]\n")
 		}
 	}
 }
